@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actividad Diaria - Envases Universales</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Enlace a tu archivo CSS personalizado -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDKs (Compat versions for global access) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <!-- Message Box -->
+    <div id="message-box" class="fixed top-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
+        Mensaje
+    </div>
+
+    <!-- Main Card Container -->
+    <div class="card-container">
+        <!-- Logo: Asegúrate de que el archivo 'logo_envases_universales.png' esté en la carpeta 'assets' -->
+        <img
+            src="assets/logo_envases_universales.png"
+            alt="Logo de Envases Universales"
+            class="mb-4 rounded-lg"
+            onerror="this.onerror=null;this.src='https://placehold.co/150x50/B02C2E/FFFFFF?text=Logo';"
+        />
+
+        <h1 class="text-4xl font-extrabold text-[var(--color-primary)] mb-2 text-center">
+            Tu Actividad Diaria
+        </h1>
+        <p id="current-date" class="text-2xl text-[var(--color-secondary)] mb-4 font-semibold"></p>
+
+        <!-- User Selection -->
+        <div class="w-full">
+            <label for="user-select" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
+                Selecciona tu nombre:
+            </label>
+            <select
+                id="user-select"
+                class="block w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
+                disabled
+            >
+                <option value="">-- Selecciona un participante --</option>
+                <!-- Las opciones serán pobladas por JS -->
+            </select>
+        </div>
+
+        <p id="user-greeting" class="text-xl text-[var(--color-primary)] font-semibold text-center"></p>
+
+        <!-- Daily Stats Section -->
+        <div class="flex justify-around w-full mb-6">
+            <div class="stat-box">
+                <p id="total-steps" class="stat-value"></p>
+                <p class="stat-label">Pasos Totales</p>
+            </div>
+            <div class="stat-box" style="background-color: rgba(176, 44, 46, 0.1);">
+                <p id="total-calories" class="stat-value"></p>
+                <p class="stat-label">Calorías Totales</p>
+            </div>
+        </div>
+
+        <!-- Manual Steps Input -->
+        <div class="w-full">
+            <label for="manual-steps" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
+                Pasos registrados (ej. de tu podómetro):
+            </label>
+            <input
+                type="number"
+                id="manual-steps"
+                placeholder="Introduce tus pasos"
+                class="block w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
+            />
+        </div>
+
+        <!-- Screenshot Upload -->
+        <div class="w-full">
+            <label for="screenshot-input" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
+                Sube una captura de pantalla (opcional):
+            </label>
+            <input
+                type="file"
+                id="screenshot-input"
+                accept="image/*"
+                class="block w-full text-gray-800 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary-light)] file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary-light)]"
+            />
+            <img id="screenshot-preview" class="mt-4 max-w-full h-auto rounded-lg shadow-md hidden" alt="Vista previa de la captura de pantalla"/>
+        </div>
+
+        <!-- Activity Selection -->
+        <div class="w-full">
+            <label for="activity-select" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
+                Selecciona tu actividad:
+            </label>
+            <select
+                id="activity-select"
+                class="block w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
+            >
+                <option value="">-- Selecciona una actividad --</option>
+                <!-- Las opciones serán pobladas por JS -->
+            </select>
+        </div>
+
+        <!-- Duration Buttons -->
+        <div class="w-full flex justify-around mt-4 mb-6 space-x-2">
+            <button data-duration="15" class="btn-duration">15 min</button>
+            <button data-duration="30" class="btn-duration">30 min</button>
+            <button data-duration="45" class="btn-duration">45 min</button>
+            <button data-duration="60" class="btn-duration">60 min</button>
+        </div>
+
+        <!-- Submit Daily Data Button -->
+        <button
+            id="submit-button"
+            class="w-full btn-primary"
+            disabled
+        >
+            Registrar Actividad Diaria
+        </button>
+
+        <!-- Leaderboard Section -->
+        <div class="leaderboard-section">
+            <h2 class="text-2xl font-bold text-[var(--color-primary)] mb-4 text-center">
+                Tablero de Clasificación
+            </h2>
+            <ul id="leaderboard-list" class="space-y-3">
+                <!-- Los elementos del tablero serán poblados por JS -->
+            </ul>
+            <p id="current-user-position" class="text-center mt-4 text-lg font-semibold text-[var(--color-primary)]"></p>
+        </div>
+    </div>
+
+    <!-- Enlace a tu archivo JavaScript -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
