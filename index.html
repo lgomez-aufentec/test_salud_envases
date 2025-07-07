@@ -7,102 +7,230 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <!-- Enlace a tu archivo CSS personalizado -->
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- Firebase SDKs (Compat versions for global access) -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+    <style>
+        /* Colores personalizados */
+        :root {
+            --color-primary: #B02C2E; /* Rojo principal */
+            --color-secondary: #808080; /* Gris secundario */
+            --color-primary-light: rgba(176, 44, 46, 0.1); /* Sombra tenue del principal */
+            --color-secondary-light: rgba(128, 128, 128, 0.1); /* Sombra tenue del secundario */
+            --color-primary-dark: #8c2325; /* Tono más oscuro del principal para hover */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #fef2f2, #fde0e0); /* Degradado suave */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .card-container {
+            background-color: #ffffff;
+            border-radius: 1.5rem; /* Más redondeado */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 2rem;
+            max-width: 480px; /* Ancho máximo para el contenedor */
+            width: 100%;
+            text-align: center;
+            margin: auto; /* Centrar horizontalmente */
+        }
+
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem; /* Más redondeado */
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--color-primary-dark);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--color-secondary);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .btn-duration {
+            background-color: var(--color-secondary-light);
+            color: var(--color-secondary);
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem; /* Más redondeado */
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid var(--color-secondary-light);
+        }
+
+        .btn-duration.selected,
+        .btn-duration:hover {
+            background-color: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .message-box {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .message-box.show {
+            opacity: 1;
+        }
+
+        .message-box.error {
+            background-color: #f44336; /* Red */
+        }
+
+        /* Animaciones */
+        @keyframes fade-in-down {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-down {
+            animation: fade-in-down 0.5s ease-out forwards;
+        }
+
+        @keyframes pulse-once {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pulse-once {
+            animation: pulse-once 0.5s ease-out;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: var(--color-primary-light);
+            border-radius: 0.75rem;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .leaderboard-item.current-user {
+            background-color: var(--color-primary);
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .leaderboard-item span:first-child {
+            font-size: 1.125rem; /* text-lg */
+        }
+
+        .leaderboard-item span:last-child {
+            font-size: 1rem; /* text-base */
+        }
+    </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
-    <!-- Message Box -->
-    <div id="message-box" class="fixed top-4 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
-        Mensaje
-    </div>
+<body>
+    <div id="message-box" class="message-box"></div>
 
-    <!-- Main Card Container -->
     <div class="card-container">
-        <!-- Logo: Asegúrate de que el archivo 'logo_envases_universales.png' esté en la carpeta 'assets' -->
-        <img
-            src="assets/logo_envases_universales.png"
-            alt="Logo de Envases Universales"
-            class="mb-4 rounded-lg"
-            onerror="this.onerror=null;this.src='https://placehold.co/150x50/B02C2E/FFFFFF?text=Logo';"
-        />
+        <!-- Header Section -->
+        <div class="mb-6">
+            <h1 class="text-4xl font-extrabold text-[var(--color-primary)] mb-1">ENVASES UNIVERSALES</h1>
+            <h2 class="text-2xl font-bold text-[var(--color-primary)] mb-2">Planta León</h2>
+            <p class="text-xl font-semibold text-[var(--color-secondary)]">Salud Ocupacional</p>
+        </div>
 
-        <h1 class="text-4xl font-extrabold text-[var(--color-primary)] mb-2 text-center">
-            Tu Actividad Diaria
-        </h1>
-        <p id="current-date" class="text-2xl text-[var(--color-secondary)] mb-4 font-semibold"></p>
+        <!-- Date and User Greeting -->
+        <p id="current-date" class="text-lg text-gray-600 mb-2"></p>
+        <p id="user-greeting" class="text-xl font-semibold text-[var(--color-primary)] mb-4 animate-fade-in-down"></p>
 
-        <!-- User Selection -->
-        <div class="w-full">
-            <label for="user-select" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
-                Selecciona tu nombre:
-            </label>
+        <!-- User Selection Dropdown -->
+        <div class="mb-6">
+            <label for="user-select" class="block text-gray-700 text-sm font-bold mb-2 text-left">Selecciona tu nombre:</label>
             <select
                 id="user-select"
-                class="block w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
+                class="block w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
                 disabled
             >
-                <option value="">-- Selecciona un participante --</option>
-                <!-- Las opciones serán pobladas por JS -->
+                <option value="">-- Cargando usuarios --</option>
             </select>
         </div>
 
-        <p id="user-greeting" class="text-xl text-[var(--color-primary)] font-semibold text-center"></p>
-
-        <!-- Daily Stats Section -->
-        <div class="flex justify-around w-full mb-6">
-            <div class="stat-box">
-                <p id="total-steps" class="stat-value"></p>
-                <p class="stat-label">Pasos Totales</p>
+        <!-- Daily Stats Boxes -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg shadow-sm border border-blue-200">
+                <p class="text-blue-700 text-sm font-semibold">Pasos Totales</p>
+                <p id="total-steps-display" class="text-blue-900 text-2xl font-bold mt-1">0</p>
             </div>
-            <div class="stat-box" style="background-color: rgba(176, 44, 46, 0.1);">
-                <p id="total-calories" class="stat-value"></p>
-                <p class="stat-label">Calorías Totales</p>
+            <div class="bg-green-50 p-4 rounded-lg shadow-sm border border-green-200">
+                <p class="text-green-700 text-sm font-semibold">Calorías Totales</p>
+                <p id="total-calories-display" class="text-green-900 text-2xl font-bold mt-1">0</p>
             </div>
         </div>
 
+        <!-- Daily Activity Input Section -->
+        <h2 class="text-2xl font-bold text-[var(--color-primary)] mb-4 text-center">¡A Mover el Esqueleto! Registra tu Actividad Diaria</h2>
+
         <!-- Manual Steps Input -->
-        <div class="w-full">
-            <label for="manual-steps" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
-                Pasos registrados (ej. de tu podómetro):
-            </label>
+        <div class="mb-4 text-left">
+            <label for="manual-steps" class="block text-gray-700 text-sm font-bold mb-2">Pasos registrados (Registrados en tu celular):</label>
             <input
                 type="number"
                 id="manual-steps"
-                placeholder="Introduce tus pasos"
-                class="block w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
+                class="block w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
+                placeholder="Ej. 5000"
+                min="0"
             />
         </div>
 
-        <!-- Screenshot Upload -->
-        <div class="w-full">
-            <label for="screenshot-input" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
-                Sube una captura de pantalla (opcional):
-            </label>
+        <!-- Screenshot Upload (Optional) -->
+        <div class="mb-4 text-left">
+            <label for="screenshot-upload" class="block text-gray-700 text-sm font-bold mb-2">Sube una captura de pantalla (opcional):</label>
             <input
                 type="file"
-                id="screenshot-input"
+                id="screenshot-upload"
                 accept="image/*"
-                class="block w-full text-gray-800 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary-light)] file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary-light)]"
+                class="block w-full text-gray-800 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)] file:text-white hover:file:bg-[var(--color-primary-dark)]"
             />
-            <img id="screenshot-preview" class="mt-4 max-w-full h-auto rounded-lg shadow-md hidden" alt="Vista previa de la captura de pantalla"/>
+            <div id="screenshot-preview-container" class="mt-2 hidden">
+                <p class="text-sm text-gray-600 mb-1">Vista previa:</p>
+                <img id="screenshot-preview" src="#" alt="Vista previa de la captura de pantalla" class="max-w-full h-auto rounded-lg shadow-md border border-gray-200"/>
+            </div>
         </div>
 
-        <!-- Activity Selection -->
-        <div class="w-full">
-            <label for="activity-select" class="block text-[var(--color-secondary)] text-sm font-bold mb-2">
-                Selecciona tu actividad:
-            </label>
+        <!-- Activity Selection Dropdown -->
+        <div class="mb-4 text-left">
+            <label for="activity-select" class="block text-gray-700 text-sm font-bold mb-2">Selecciona tu actividad:</label>
             <select
                 id="activity-select"
-                class="block w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
+                class="block w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-gray-50 text-gray-800 text-lg shadow-sm"
             >
                 <option value="">-- Selecciona una actividad --</option>
-                <!-- Las opciones serán pobladas por JS -->
+                <!-- Options will be populated by JS -->
             </select>
         </div>
 
@@ -124,18 +252,399 @@
         </button>
 
         <!-- Leaderboard Section -->
-        <div class="leaderboard-section">
+        <div class="leaderboard-section mt-8">
             <h2 class="text-2xl font-bold text-[var(--color-primary)] mb-4 text-center">
                 Tablero de Clasificación
             </h2>
             <ul id="leaderboard-list" class="space-y-3">
-                <!-- Los elementos del tablero serán poblados por JS -->
+                <!-- Leaderboard items will be populated by JS -->
             </ul>
-            <p id="current-user-position" class="text-center mt-4 text-lg font-semibold text-[var(--color-primary)]"></p>
+            <p id="current-user-leaderboard-position" class="text-md text-gray-600 mt-4 text-center"></p>
         </div>
     </div>
 
-    <!-- Enlace a tu archivo JavaScript -->
-    <script type="module" src="script.js"></script>
+    <script type="module">
+        // URL de tu Google Apps Script desplegado como aplicación web
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzBh1wUrGwS8dgfXh5e_XkgjTEGp4D-iGjs1RR9yc_T9a2TVSPF3hfVbeyQYui_EJq9/exec';
+
+        // Variables globales para la aplicación
+        let userName = null;
+        let selectedActivity = null;
+        let selectedDuration = null;
+        let uploadedImageBase64 = null;
+        let hasSubmittedToday = false;
+        let leaderboard = []; // Almacena los datos de la tabla de clasificación
+
+        // Obtener elementos del DOM
+        const userSelect = document.getElementById('user-select');
+        const currentDateElem = document.getElementById('current-date');
+        const userGreetingElem = document.getElementById('user-greeting');
+        const totalStepsDisplay = document.getElementById('total-steps-display');
+        const totalCaloriesDisplay = document.getElementById('total-calories-display');
+        const manualStepsInput = document.getElementById('manual-steps');
+        const screenshotUploadInput = document.getElementById('screenshot-upload');
+        const screenshotPreview = document.getElementById('screenshot-preview');
+        const screenshotPreviewContainer = document.getElementById('screenshot-preview-container');
+        const activitySelect = document.getElementById('activity-select');
+        const durationButtons = document.querySelectorAll('.btn-duration');
+        const submitButton = document.getElementById('submit-button');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const currentUserLeaderboardPosition = document.getElementById('current-user-leaderboard-position');
+        const messageBox = document.getElementById('message-box');
+
+        // Actividades comunes
+        const commonActivities = [
+            { name: 'Fútbol', stepsPerMin: 150, caloriesPerMin: 12 },
+            { name: 'Ciclismo', stepsPerMin: 0, caloriesPerMin: 7 },
+            { name: 'Caminar', stepsPerMin: 100, caloriesPerMin: 4 },
+            { name: 'Correr', stepsPerMin: 180, caloriesPerMin: 10 },
+            { name: 'Natación', stepsPerMin: 0, caloriesPerMin: 8 },
+            { name: 'Box', stepsPerMin: 120, caloriesPerMin: 11 },
+            { name: 'Levantamiento de Pesas', stepsPerMin: 20, caloriesPerMin: 6 },
+            { name: 'Otra actividad', stepsPerMin: 0, caloriesPerMin: 0 } // Actividad genérica
+        ];
+
+        /**
+         * Muestra un mensaje temporal al usuario.
+         * @param {string} msg - El mensaje a mostrar.
+         * @param {boolean} isError - Si el mensaje es un error.
+         */
+        function showMessage(msg, isError = false) {
+            messageBox.textContent = msg;
+            messageBox.className = 'message-box show';
+            if (isError) {
+                messageBox.classList.add('error');
+            } else {
+                messageBox.classList.remove('error');
+            }
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000); // Ocultar después de 3 segundos
+        }
+
+        /**
+         * Obtiene la fecha actual en formato YYYY-MM-DD.
+         * @returns {string} La fecha actual.
+         */
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        /**
+         * Calcula los pasos y calorías basados en la actividad, duración y pasos manuales.
+         * @param {number} manualSteps - Pasos registrados manualmente.
+         * @returns {{steps: number, calories: number}} Objeto con pasos y calorías calculados.
+         */
+        function calculateActivityData(manualSteps) {
+            let steps = 0;
+            let calories = 0;
+
+            if (selectedActivity && selectedDuration) {
+                const activity = commonActivities.find(act => act.name === selectedActivity);
+                if (activity) {
+                    steps = activity.stepsPerMin * selectedDuration;
+                    calories = activity.caloriesPerMin * selectedDuration;
+                }
+            }
+
+            // Sumar pasos manuales
+            steps += manualSteps;
+
+            return { steps, calories };
+        }
+
+        /**
+         * Actualiza el estado del botón de envío.
+         */
+        function updateSubmitButtonState() {
+            const manualSteps = parseInt(manualStepsInput.value) || 0;
+            const isFormComplete = userName && selectedActivity && selectedDuration && manualSteps > 0 && !hasSubmittedToday;
+            submitButton.disabled = !isFormComplete;
+            if (hasSubmittedToday) {
+                submitButton.textContent = 'Actividad Diaria Registrada';
+            } else {
+                submitButton.textContent = 'Registrar Actividad Diaria';
+            }
+        }
+
+        /**
+         * Carga y muestra los datos del usuario actual (pasos y calorías totales) desde GAS.
+         */
+        async function loadUserNameData() {
+            if (!userName) return;
+
+            try {
+                const response = await fetch(GAS_WEB_APP_URL + '?command=getTotals&userName=' + encodeURIComponent(userName));
+                const data = await response.json();
+
+                if (data.success) {
+                    totalStepsDisplay.textContent = data.totalSteps ? data.totalSteps.toLocaleString() : '0';
+                    totalCaloriesDisplay.textContent = data.totalCalories ? data.totalCalories.toLocaleString() : '0';
+
+                    const todayDate = getTodayDateString();
+                    hasSubmittedToday = data.lastSubmissionDate === todayDate;
+                } else {
+                    totalStepsDisplay.textContent = '0';
+                    totalCaloriesDisplay.textContent = '0';
+                    hasSubmittedToday = false;
+                    console.error("Error al cargar datos del usuario desde GAS:", data.error);
+                    showMessage("Error al cargar datos del usuario.", true);
+                }
+            } catch (error) {
+                console.error("Error de red al cargar datos del usuario:", error);
+                showMessage("Error de conexión al cargar datos del usuario.", true);
+            }
+            updateSubmitButtonState();
+        }
+
+        /**
+         * Obtiene los datos de la tabla de clasificación desde GAS.
+         */
+        async function fetchLeaderboardData() {
+            try {
+                const response = await fetch(GAS_WEB_APP_URL + '?command=getLeaderboard');
+                const data = await response.json();
+
+                if (data.success) {
+                    leaderboard = data.leaderboard; // Asume que GAS devuelve la lista ya ordenada
+                } else {
+                    console.error("Error al obtener la tabla de clasificación desde GAS:", data.error);
+                    showMessage("Error al cargar la tabla de clasificación.", true);
+                    leaderboard = [];
+                }
+            } catch (error) {
+                console.error("Error de red al obtener la tabla de clasificación:", error);
+                showMessage("Error de conexión al cargar la tabla de clasificación.", true);
+                leaderboard = [];
+            }
+            updateLeaderboardUI();
+        }
+
+        /**
+         * Actualiza la interfaz de usuario de la tabla de clasificación.
+         */
+        function updateLeaderboardUI() {
+            leaderboardList.innerHTML = '';
+            currentUserLeaderboardPosition.textContent = '';
+
+            // Mostrar solo los primeros 3 lugares
+            const top3 = leaderboard.slice(0, 3);
+
+            if (top3.length === 0) {
+                leaderboardList.innerHTML = '<li class="text-gray-500 text-center">Nadie ha registrado actividad aún. ¡Sé el primero!</li>';
+            } else {
+                top3.forEach((user, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'leaderboard-item';
+                    listItem.innerHTML = `
+                        <span>${index + 1}. ${user.NombreParticipante}</span>
+                        <span>${(user.PasosTotales || 0).toLocaleString()} pasos</span>
+                    `;
+                    leaderboardList.appendChild(listItem);
+                });
+            }
+
+            // Mostrar la posición del usuario actual
+            if (userName) {
+                const userIndex = leaderboard.findIndex(u => u.NombreParticipante === userName);
+                if (userIndex !== -1) {
+                    const userPosition = userIndex + 1;
+                    const userTotalSteps = (leaderboard[userIndex].PasosTotales || 0).toLocaleString();
+                    currentUserLeaderboardPosition.textContent = `Estás en la posición ${userPosition} con ${userTotalSteps} pasos.`;
+                } else {
+                    currentUserLeaderboardPosition.textContent = `Aún no apareces en la tabla de clasificación. ¡Registra tu actividad!`;
+                }
+            }
+        }
+
+        /**
+         * Actualiza todos los elementos dinámicos de la interfaz de usuario.
+         */
+        function updateUI() {
+            currentDateElem.textContent = `Fecha: ${getTodayDateString()}`;
+
+            if (userName) {
+                userGreetingElem.textContent = `¡Hola, ${userName}!`;
+                userGreetingElem.classList.add('animate-fade-in-down'); // Re-aplicar animación
+            } else {
+                userGreetingElem.textContent = 'Por favor, selecciona tu nombre.';
+                totalStepsDisplay.textContent = '0';
+                totalCaloriesDisplay.textContent = '0';
+            }
+            loadUserNameData(); // Cargar datos específicos del usuario
+            updateSubmitButtonState(); // Actualizar el estado del botón
+            fetchLeaderboardData(); // Asegurar que la tabla de clasificación se actualice
+        }
+
+        // --- Manejadores de Eventos ---
+
+        userSelect.addEventListener('change', (e) => {
+            userName = e.target.value;
+            updateUI();
+        });
+
+        activitySelect.addEventListener('change', (e) => {
+            selectedActivity = e.target.value;
+            updateSubmitButtonState();
+        });
+
+        durationButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                durationButtons.forEach(btn => btn.classList.remove('selected'));
+                e.target.classList.add('selected');
+                selectedDuration = parseInt(e.target.dataset.duration);
+                updateSubmitButtonState();
+            });
+        });
+
+        manualStepsInput.addEventListener('input', () => {
+            updateSubmitButtonState();
+        });
+
+        screenshotUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    uploadedImageBase64 = event.target.result; // Base64 string
+                    screenshotPreview.src = uploadedImageBase64;
+                    screenshotPreviewContainer.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                uploadedImageBase64 = null;
+                screenshotPreview.src = '#';
+                screenshotPreviewContainer.classList.add('hidden');
+            }
+        });
+
+        submitButton.addEventListener('click', async () => {
+            if (!userName || !selectedActivity || !selectedDuration) {
+                showMessage('Por favor, completa todos los campos requeridos.', true);
+                return;
+            }
+
+            const manualSteps = parseInt(manualStepsInput.value) || 0;
+            if (manualSteps <= 0) {
+                showMessage('Por favor, ingresa un número de pasos válido (mayor que 0).', true);
+                return;
+            }
+
+            if (hasSubmittedToday) {
+                showMessage('Ya has registrado tu actividad para hoy. ¡Vuelve mañana!', true);
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Registrando...';
+            submitButton.classList.add('animate-pulse-once');
+
+            try {
+                const { steps, calories } = calculateActivityData(manualSteps);
+                const todayDate = getTodayDateString();
+                const timestamp = new Date().toISOString();
+
+                const payload = {
+                    command: 'submitDailyRecord',
+                    data: JSON.stringify({ // Stringify the data object
+                        Fecha: todayDate,
+                        Nombre: userName, // 'Nombre' para Registros Diarios
+                        Participante: userName, // 'Participante' para Totales Concurso
+                        Pasos: steps,
+                        Calorias: calories,
+                        Actividad: selectedActivity,
+                        Duracion: selectedDuration,
+                        Captura: uploadedImageBase64 // Puede ser null
+                    })
+                };
+
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded', // Formato para GAS
+                    },
+                    body: new URLSearchParams(payload).toString()
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('¡Actividad registrada con éxito!');
+                    hasSubmittedToday = true; // Marcar como enviado para hoy
+                    updateUI(); // Refrescar la UI y el estado del botón
+
+                    // Limpiar formulario
+                    manualStepsInput.value = '';
+                    screenshotUploadInput.value = '';
+                    uploadedImageBase64 = null;
+                    screenshotPreview.src = '#';
+                    screenshotPreviewContainer.classList.add('hidden');
+                    activitySelect.value = '';
+                    durationButtons.forEach(btn => btn.classList.remove('selected'));
+                    selectedActivity = null;
+                    selectedDuration = null;
+                } else {
+                    console.error("Error al registrar la actividad en GAS:", result.error);
+                    showMessage(`Error al registrar: ${result.error}`, true);
+                }
+            } catch (error) {
+                console.error("Error de red al registrar la actividad:", error);
+                showMessage(`Error de conexión al registrar: ${error.message}`, true);
+            } finally {
+                submitButton.classList.remove('animate-pulse-once');
+                updateSubmitButtonState(); // Asegurar que el botón se actualice incluso con errores
+            }
+        });
+
+        /**
+         * Carga los participantes desde la hoja "Participantes" de Google Sheets.
+         */
+        async function loadParticipants() {
+            try {
+                const response = await fetch(GAS_WEB_APP_URL + '?command=getParticipants');
+                const data = await response.json();
+
+                if (data.success && data.participants) {
+                    userSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>'; // Limpiar y añadir opción por defecto
+                    data.participants.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p;
+                        option.textContent = p;
+                        userSelect.appendChild(option);
+                    });
+                    userSelect.disabled = false; // Habilitar el selector de usuario
+                } else {
+                    console.error("Error al cargar participantes desde GAS:", data.error);
+                    showMessage("Error al cargar la lista de participantes.", true);
+                    userSelect.innerHTML = '<option value="">-- Error al cargar usuarios --</option>';
+                }
+            } catch (error) {
+                console.error("Error de red al cargar participantes:", error);
+                showMessage("Error de conexión al cargar participantes.", true);
+                userSelect.innerHTML = '<option value="">-- Error de conexión --</option>';
+            }
+        }
+
+        // --- Inicialización de la Aplicación ---
+        window.onload = async () => {
+            // Cargar participantes al inicio
+            await loadParticipants();
+
+            // Rellenar el selector de actividades
+            activitySelect.innerHTML = '<option value="">-- Selecciona una actividad --</option>'; // Limpiar opciones existentes
+            commonActivities.forEach(activity => {
+                const option = document.createElement('option');
+                option.value = activity.name;
+                option.textContent = activity.name;
+                activitySelect.appendChild(option);
+            });
+
+            updateUI(); // Actualizar la UI inicial
+        };
+    </script>
 </body>
 </html>
