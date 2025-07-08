@@ -22,6 +22,7 @@
             background: linear-gradient(to bottom right, #fef2f2, #fde0e0); /* Degradado suave */
             min-height: 100vh;
             display: flex;
+            flex-direction: column; /* Para que el mensaje quede abajo */
             justify-content: center;
             align-items: center;
             padding: 1rem;
@@ -159,13 +160,13 @@
     <div class="card-container">
         <!-- Header Section -->
         <div class="mb-6">
-            <h1 class="text-4xl font-extrabold text-[var(--color-primary)] mb-1">ENVASES UNIVERSALES</h1>
-            <h2 class="text-2xl font-bold text-[var(--color-primary)] mb-2">Planta León</h2>
+            <h1 class="text-3xl font-extrabold text-[var(--color-primary)] mb-1">ENVASES UNIVERSALES</h1>
+            <h2 class="text-2xl font-bold text-[var(--color-primary)] mb-2">MP22</h2>
             <p class="text-xl font-semibold text-[var(--color-secondary)]">Salud Ocupacional</p>
         </div>
 
         <!-- Date and User Greeting -->
-        <p id="current-date" class="text-lg text-gray-600 mb-2"></p>
+        <p id="current-date" class="text-2xl text-gray-600 mb-2 font-semibold"></p>
         <p id="user-greeting" class="text-xl font-semibold text-[var(--color-primary)] mb-4 animate-fade-in-down"></p>
 
         <!-- User Selection Dropdown -->
@@ -181,7 +182,7 @@
         </div>
 
         <!-- Daily Stats Boxes -->
-        <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-2 gap-4 mb-2">
             <div class="bg-blue-50 p-4 rounded-lg shadow-sm border border-blue-200">
                 <p class="text-blue-700 text-sm font-semibold">Pasos Totales</p>
                 <p id="total-steps-display" class="text-blue-900 text-2xl font-bold mt-1">0</p>
@@ -191,6 +192,12 @@
                 <p id="total-calories-display" class="text-green-900 text-2xl font-bold mt-1">0</p>
             </div>
         </div>
+        <!-- Última Fecha de Registro -->
+        <div class="w-full bg-gray-100 p-2 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <p class="text-gray-700 text-sm font-semibold">Último Registro:</p>
+            <p id="current-user-last-record-date" class="text-gray-900 text-lg font-bold mt-1">N/A</p>
+        </div>
+
 
         <!-- Daily Activity Input Section -->
         <h2 class="text-2xl font-bold text-[var(--color-primary)] mb-4 text-center">¡A Mover el Esqueleto! Registra tu Actividad Diaria</h2>
@@ -263,17 +270,30 @@
         </div>
     </div>
 
+    <!-- Mensaje informativo al final -->
+    <p class="text-xs text-gray-500 mt-4 text-center max-w-md">
+        Los cálculos de calorías y pasos se basan en estimaciones promedio derivadas de investigaciones en ciencia del ejercicio y salud pública, como las proporcionadas por el Compendio de Actividades Físicas (ACSM) y organizaciones de salud reconocidas. Es importante recordar que el gasto calórico individual puede variar según el metabolismo, la intensidad y el peso corporal.
+    </p>
+
     <script type="module">
         // URL de tu Google Apps Script desplegado como aplicación web
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzBh1wUrGwS8dgfXh5e_XkgjTEGp4D-iGjs1RR9yc_T9a2TVSPF3hfVbeyQYui_EJq9/exec';
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzD0cdSPUfS_aM7cJdHWPcfcILCtqtjbDwwcQMyCUHpduUi8OFvja4J6JwFvzu7LU8L/exec';
 
         // Variables globales para la aplicación
         let userName = null;
         let selectedActivity = null;
         let selectedDuration = null;
-        let uploadedImageBase64 = null;
+        let uploadedImageBase64 = null; // Sigue siendo Base64 en el frontend antes de enviar
         let hasSubmittedToday = false;
         let leaderboard = []; // Almacena los datos de la tabla de clasificación
+
+        // *** VARIABLE PARA EL LÍMITE DE PASOS ***
+        const MAX_MANUAL_STEPS = 15000; // Puedes cambiar este valor según sea necesario
+
+        // Constantes para la conversión de pasos a calorías
+        const AVERAGE_STEP_LENGTH_METERS = 0.75; // Longitud promedio de una zancada en metros
+        const AVERAGE_WALKING_SPEED_KMPH = 5; // Velocidad promedio de caminata en km/h
+        const AVERAGE_WALKING_SPEED_METERS_PER_MIN = (AVERAGE_WALKING_SPEED_KMPH * 1000) / 60; // Convertir a metros/min
 
         // Obtener elementos del DOM
         const userSelect = document.getElementById('user-select');
@@ -281,6 +301,7 @@
         const userGreetingElem = document.getElementById('user-greeting');
         const totalStepsDisplay = document.getElementById('total-steps-display');
         const totalCaloriesDisplay = document.getElementById('total-calories-display');
+        const currentUserLastRecordDateElem = document.getElementById('current-user-last-record-date'); // Nuevo elemento
         const manualStepsInput = document.getElementById('manual-steps');
         const screenshotUploadInput = document.getElementById('screenshot-upload');
         const screenshotPreview = document.getElementById('screenshot-preview');
@@ -293,15 +314,18 @@
         const messageBox = document.getElementById('message-box');
 
         // Actividades comunes
+        // "Otra actividad" se mueve al final después de ordenar
         const commonActivities = [
             { name: 'Fútbol', stepsPerMin: 150, caloriesPerMin: 12 },
             { name: 'Ciclismo', stepsPerMin: 0, caloriesPerMin: 7 },
-            { name: 'Caminar', stepsPerMin: 100, caloriesPerMin: 4 },
+            { name: 'Caminar', stepsPerMin: 100, caloriesPerMin: 4 }, // Usaremos este valor para la conversión de pasos
             { name: 'Correr', stepsPerMin: 180, caloriesPerMin: 10 },
             { name: 'Natación', stepsPerMin: 0, caloriesPerMin: 8 },
             { name: 'Box', stepsPerMin: 120, caloriesPerMin: 11 },
             { name: 'Levantamiento de Pesas', stepsPerMin: 20, caloriesPerMin: 6 },
-            { name: 'Otra actividad', stepsPerMin: 0, caloriesPerMin: 0 } // Actividad genérica
+            { name: 'Saltar la cuerda', stepsPerMin: 200, caloriesPerMin: 15 }, 
+            { name: 'Gimnasio', stepsPerMin: 50, caloriesPerMin: 8 }, 
+            { name: 'Otra actividad', stepsPerMin: 0, caloriesPerMin: 0 } 
         ];
 
         /**
@@ -336,25 +360,47 @@
 
         /**
          * Calcula los pasos y calorías basados en la actividad, duración y pasos manuales.
+         * Ahora incluye la conversión de pasos manuales a calorías.
          * @param {number} manualSteps - Pasos registrados manualmente.
          * @returns {{steps: number, calories: number}} Objeto con pasos y calorías calculados.
          */
         function calculateActivityData(manualSteps) {
-            let steps = 0;
-            let calories = 0;
+            let totalSteps = 0;
+            let totalCalories = 0;
 
+            // 1. Calcular calorías y pasos de la actividad principal (si seleccionada)
             if (selectedActivity && selectedDuration) {
                 const activity = commonActivities.find(act => act.name === selectedActivity);
                 if (activity) {
-                    steps = activity.stepsPerMin * selectedDuration;
-                    calories = activity.caloriesPerMin * selectedDuration;
+                    totalSteps += activity.stepsPerMin * selectedDuration;
+                    totalCalories += activity.caloriesPerMin * selectedDuration;
                 }
             }
 
-            // Sumar pasos manuales
-            steps += manualSteps;
+            // 2. Convertir pasos manuales a calorías y sumarlos
+            if (manualSteps > 0) {
+                // Sumar los pasos manuales a los pasos totales
+                totalSteps += manualSteps;
 
-            return { steps, calories };
+                // Calcular la distancia a partir de los pasos manuales
+                const distanceInMeters = manualSteps * AVERAGE_STEP_LENGTH_METERS;
+
+                // Calcular el tiempo estimado de caminata para esta distancia
+                // Tiempo (minutos) = Distancia (metros) / Velocidad (metros/min)
+                const estimatedWalkingTimeMinutes = distanceInMeters / AVERAGE_WALKING_SPEED_METERS_PER_MIN;
+
+                // Obtener las calorías por minuto para la actividad "Caminar"
+                const walkingActivity = commonActivities.find(act => act.name === 'Caminar');
+                const caloriesPerMinForWalking = walkingActivity ? walkingActivity.caloriesPerMin : 4; // Valor por defecto si no se encuentra
+
+                // Calcular las calorías de los pasos manuales
+                const caloriesFromManualSteps = estimatedWalkingTimeMinutes * caloriesPerMinForWalking;
+
+                // Sumar estas calorías al total
+                totalCalories += caloriesFromManualSteps;
+            }
+
+            return { steps: totalSteps, calories: totalCalories };
         }
 
         /**
@@ -362,11 +408,13 @@
          */
         function updateSubmitButtonState() {
             const manualSteps = parseInt(manualStepsInput.value) || 0;
-            const isFormComplete = userName && selectedActivity && selectedDuration && manualSteps > 0 && !hasSubmittedToday;
-            submitButton.disabled = !isFormComplete;
+            const isFormComplete = userName && selectedActivity && selectedDuration && manualSteps > 0 && manualSteps <= MAX_MANUAL_STEPS;
+            
             if (hasSubmittedToday) {
-                submitButton.textContent = 'Actividad Diaria Registrada';
+                submitButton.disabled = true;
+                submitButton.textContent = 'Actividad Diaria Registrada (Vuelve mañana)';
             } else {
+                submitButton.disabled = !isFormComplete;
                 submitButton.textContent = 'Registrar Actividad Diaria';
             }
         }
@@ -375,7 +423,15 @@
          * Carga y muestra los datos del usuario actual (pasos y calorías totales) desde GAS.
          */
         async function loadUserNameData() {
-            if (!userName) return;
+            if (!userName) {
+                // Resetear si no hay usuario seleccionado
+                totalStepsDisplay.textContent = '0';
+                totalCaloriesDisplay.textContent = '0';
+                currentUserLastRecordDateElem.textContent = 'N/A'; // Resetear la fecha de último registro
+                hasSubmittedToday = false;
+                updateSubmitButtonState();
+                return;
+            }
 
             try {
                 const response = await fetch(GAS_WEB_APP_URL + '?command=getTotals&userName=' + encodeURIComponent(userName));
@@ -385,12 +441,42 @@
                     totalStepsDisplay.textContent = data.totalSteps ? data.totalSteps.toLocaleString() : '0';
                     totalCaloriesDisplay.textContent = data.totalCalories ? data.totalCalories.toLocaleString() : '0';
 
-                    const todayDate = getTodayDateString();
-                    hasSubmittedToday = data.lastSubmissionDate === todayDate;
+                    const todayDate = getTodayDateString(); // Formato YYYY-MM-DD
+                    let gasLastSubmissionDate = data.lastSubmissionDate;
+                    let formattedGasDate = '';
+
+                    // Intentar parsear la fecha de GAS y formatearla a YYYY-MM-DD
+                    try {
+                        const dateFromGas = new Date(gasLastSubmissionDate);
+                        // Verificar si la fecha es válida antes de formatear
+                        if (!isNaN(dateFromGas.getTime())) {
+                            const year = dateFromGas.getFullYear();
+                            const month = String(dateFromGas.getMonth() + 1).padStart(2, '0');
+                            const day = String(dateFromGas.getDate()).padStart(2, '0');
+                            formattedGasDate = `${year}-${month}-${day}`;
+                        } else {
+                            // Si el parseo falla (ej. la cadena no es una fecha válida), usar la cadena tal cual
+                            formattedGasDate = String(gasLastSubmissionDate || '');
+                        }
+                    } catch (e) {
+                        console.warn("Error al intentar parsear la fecha de GAS, usando la cadena original:", e);
+                        formattedGasDate = String(gasLastSubmissionDate || '');
+                    }
+
+                    // Actualizar el elemento de la última fecha de registro
+                    currentUserLastRecordDateElem.textContent = formattedGasDate || 'N/A';
+
+                    // *** LOGS DE DEPURACIÓN ACTUALIZADOS ***
+                    console.log(`Fecha actual (frontend): ${todayDate}`);
+                    console.log(`Última fecha de registro (GAS, formateada en frontend): ${formattedGasDate}`);
+                    console.log(`¿Son iguales las fechas? ${formattedGasDate === todayDate}`);
+                    // *************************
+
+                    hasSubmittedToday = formattedGasDate === todayDate;
                 } else {
                     totalStepsDisplay.textContent = '0';
                     totalCaloriesDisplay.textContent = '0';
-                    hasSubmittedToday = false;
+                    currentUserLastRecordDateElem.textContent = 'N/A'; // Resetear si hay error
                     console.error("Error al cargar datos del usuario desde GAS:", data.error);
                     showMessage("Error al cargar datos del usuario.", true);
                 }
@@ -398,7 +484,7 @@
                 console.error("Error de red al cargar datos del usuario:", error);
                 showMessage("Error de conexión al cargar datos del usuario.", true);
             }
-            updateSubmitButtonState();
+            updateSubmitButtonState(); // Actualizar el estado del botón después de cargar los datos
         }
 
         /**
@@ -474,9 +560,9 @@
                 userGreetingElem.textContent = 'Por favor, selecciona tu nombre.';
                 totalStepsDisplay.textContent = '0';
                 totalCaloriesDisplay.textContent = '0';
+                currentUserLastRecordDateElem.textContent = 'N/A'; // Asegurarse de que se resetee
             }
-            loadUserNameData(); // Cargar datos específicos del usuario
-            updateSubmitButtonState(); // Actualizar el estado del botón
+            loadUserNameData(); // Cargar datos específicos del usuario y actualizar el estado del botón
             fetchLeaderboardData(); // Asegurar que la tabla de clasificación se actualice
         }
 
@@ -484,6 +570,17 @@
 
         userSelect.addEventListener('change', (e) => {
             userName = e.target.value;
+            // Resetear el formulario al cambiar de usuario
+            manualStepsInput.value = '';
+            screenshotUploadInput.value = '';
+            uploadedImageBase64 = null;
+            screenshotPreview.src = '#';
+            screenshotPreviewContainer.classList.add('hidden');
+            activitySelect.value = '';
+            durationButtons.forEach(btn => btn.classList.remove('selected'));
+            selectedActivity = null;
+            selectedDuration = null;
+            hasSubmittedToday = false; // Resetear la bandera para el nuevo usuario
             updateUI();
         });
 
@@ -502,6 +599,21 @@
         });
 
         manualStepsInput.addEventListener('input', () => {
+            // Validar que solo sean números y el límite
+            let value = manualStepsInput.value;
+            if (value === '' || isNaN(value)) {
+                manualStepsInput.value = ''; // Limpiar si no es número
+                showMessage('¡Ojo! Solo puedes ingresar números en los pasos.', true);
+            } else {
+                value = parseInt(value);
+                if (value > MAX_MANUAL_STEases) {
+                    manualStepsInput.value = MAX_MANUAL_STEASES; // Limitar al máximo
+                    showMessage(`¡Wow, campeón! El máximo de pasos para registrar es ${MAX_MANUAL_STEASES.toLocaleString()}.`, true);
+                } else if (value < 0) {
+                    manualStepsInput.value = 0; // No permitir negativos
+                    showMessage('¡Vamos, los pasos no pueden ser negativos!', true);
+                }
+            }
             updateSubmitButtonState();
         });
 
@@ -523,8 +635,14 @@
         });
 
         submitButton.addEventListener('click', async () => {
+            // **NUEVA VALIDACIÓN AL HACER CLIC EN EL BOTÓN**
+            if (hasSubmittedToday) {
+                showMessage('¡Alto ahí, superhéroe! Ya dejaste tu huella de pasos y calorías por hoy. ¡A recargar energías para mañana!', true);
+                return; // Detener la ejecución si ya se registró hoy
+            }
+
             if (!userName || !selectedActivity || !selectedDuration) {
-                showMessage('Por favor, completa todos los campos requeridos.', true);
+                showMessage('Por favor, selecciona tu nombre, actividad y duración.', true);
                 return;
             }
 
@@ -533,11 +651,12 @@
                 showMessage('Por favor, ingresa un número de pasos válido (mayor que 0).', true);
                 return;
             }
-
-            if (hasSubmittedToday) {
-                showMessage('Ya has registrado tu actividad para hoy. ¡Vuelve mañana!', true);
-                return;
+            // Validar el límite de pasos también en el submit
+            if (manualSteps > MAX_MANUAL_STEASES) {
+                 showMessage(`¡Wow, campeón! El máximo de pasos para registrar es ${MAX_MANUAL_STEASES.toLocaleString()}.`, true);
+                 return;
             }
+
 
             submitButton.disabled = true;
             submitButton.textContent = 'Registrando...';
@@ -558,7 +677,8 @@
                         Calorias: calories,
                         Actividad: selectedActivity,
                         Duracion: selectedDuration,
-                        Captura: uploadedImageBase64 // Puede ser null
+                        // ¡CAMBIO AQUÍ! Ahora el script de GAS se encarga de la subida a Drive
+                        Captura: uploadedImageBase64 // Se envía la Base64 al script de GAS
                     })
                 };
 
@@ -609,6 +729,9 @@
                 const data = await response.json();
 
                 if (data.success && data.participants) {
+                    // Ordenar participantes alfabéticamente
+                    data.participants.sort((a, b) => a.localeCompare(b));
+
                     userSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>'; // Limpiar y añadir opción por defecto
                     data.participants.forEach(p => {
                         const option = document.createElement('option');
@@ -636,12 +759,29 @@
 
             // Rellenar el selector de actividades
             activitySelect.innerHTML = '<option value="">-- Selecciona una actividad --</option>'; // Limpiar opciones existentes
-            commonActivities.forEach(activity => {
+            
+            // Separar "Otra actividad"
+            const otherActivity = commonActivities.find(act => act.name === 'Otra actividad');
+            const filteredActivities = commonActivities.filter(act => act.name !== 'Otra actividad');
+
+            // Ordenar las actividades restantes alfabéticamente por nombre
+            filteredActivities.sort((a, b) => a.name.localeCompare(b.name));
+
+            // Añadir las actividades ordenadas
+            filteredActivities.forEach(activity => {
                 const option = document.createElement('option');
                 option.value = activity.name;
                 option.textContent = activity.name;
                 activitySelect.appendChild(option);
             });
+
+            // Añadir "Otra actividad" al final si existe
+            if (otherActivity) {
+                const option = document.createElement('option');
+                option.value = otherActivity.name;
+                option.textContent = otherActivity.name;
+                activitySelect.appendChild(option);
+            }
 
             updateUI(); // Actualizar la UI inicial
         };
