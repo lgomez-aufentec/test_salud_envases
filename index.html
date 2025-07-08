@@ -324,8 +324,8 @@
             { name: 'Box', stepsPerMin: 120, caloriesPerMin: 11 },
             { name: 'Levantamiento de Pesas', stepsPerMin: 20, caloriesPerMin: 6 },
             { name: 'Saltar la cuerda', stepsPerMin: 200, caloriesPerMin: 15 }, 
-            { name: 'Gimnasio', stepsPerMin: 50, caloriesPerMin: 8 }, 
-            { name: 'Otra actividad', stepsPerMin: 0, caloriesPerMin: 0 } 
+            { name: 'Gimnasio', stepsPerMin: 50, caloriesPerMin: 8 }
+            // 'Otra actividad' ha sido eliminada de aquí
         ];
 
         /**
@@ -518,7 +518,9 @@
             currentUserLeaderboardPosition.textContent = '';
 
             // Mostrar solo los primeros 3 lugares
-            const top3 = leaderboard.slice(0, 3);
+            // La tabla de clasificación se ordenará por calorías en lugar de pasos
+            const sortedLeaderboardByCalories = [...leaderboard].sort((a, b) => (b.CaloriasTotales || 0) - (a.CaloriasTotales || 0));
+            const top3 = sortedLeaderboardByCalories.slice(0, 3);
 
             if (top3.length === 0) {
                 leaderboardList.innerHTML = '<li class="text-gray-500 text-center">Nadie ha registrado actividad aún. ¡Sé el primero!</li>';
@@ -528,19 +530,19 @@
                     listItem.className = 'leaderboard-item';
                     listItem.innerHTML = `
                         <span>${index + 1}. ${user.NombreParticipante}</span>
-                        <span>${(user.PasosTotales || 0).toLocaleString()} pasos</span>
+                        <span>${(user.CaloriasTotales || 0).toLocaleString()} calorías</span>
                     `;
                     leaderboardList.appendChild(listItem);
                 });
             }
 
-            // Mostrar la posición del usuario actual
+            // Mostrar la posición del usuario actual por calorías
             if (userName) {
-                const userIndex = leaderboard.findIndex(u => u.NombreParticipante === userName);
+                const userIndex = sortedLeaderboardByCalories.findIndex(u => u.NombreParticipante === userName);
                 if (userIndex !== -1) {
                     const userPosition = userIndex + 1;
-                    const userTotalSteps = (leaderboard[userIndex].PasosTotales || 0).toLocaleString();
-                    currentUserLeaderboardPosition.textContent = `Estás en la posición ${userPosition} con ${userTotalSteps} pasos.`;
+                    const userTotalCalories = (sortedLeaderboardByCalories[userIndex].CaloriasTotales || 0).toLocaleString();
+                    currentUserLeaderboardPosition.textContent = `Estás en la posición ${userPosition} con ${userTotalCalories} calorías.`;
                 } else {
                     currentUserLeaderboardPosition.textContent = `Aún no apareces en la tabla de clasificación. ¡Registra tu actividad!`;
                 }
@@ -606,9 +608,9 @@
                 showMessage('¡Ojo! Solo puedes ingresar números en los pasos.', true);
             } else {
                 value = parseInt(value);
-                if (value > MAX_MANUAL_STEases) {
-                    manualStepsInput.value = MAX_MANUAL_STEASES; // Limitar al máximo
-                    showMessage(`¡Wow, campeón! El máximo de pasos para registrar es ${MAX_MANUAL_STEASES.toLocaleString()}.`, true);
+                if (value > MAX_MANUAL_STEPS) {
+                    manualStepsInput.value = MAX_MANUAL_STEPS; // Limitar al máximo
+                    showMessage(`¡Wow, campeón! El máximo de pasos para registrar es ${MAX_MANUAL_STEPS.toLocaleString()}.`, true);
                 } else if (value < 0) {
                     manualStepsInput.value = 0; // No permitir negativos
                     showMessage('¡Vamos, los pasos no pueden ser negativos!', true);
@@ -652,8 +654,8 @@
                 return;
             }
             // Validar el límite de pasos también en el submit
-            if (manualSteps > MAX_MANUAL_STEASES) {
-                 showMessage(`¡Wow, campeón! El máximo de pasos para registrar es ${MAX_MANUAL_STEASES.toLocaleString()}.`, true);
+            if (manualSteps > MAX_MANUAL_STEPS) {
+                 showMessage(`¡Wow, campeón! El máximo de pasos para registrar es ${MAX_MANUAL_STEPS.toLocaleString()}.`, true);
                  return;
             }
 
@@ -760,28 +762,16 @@
             // Rellenar el selector de actividades
             activitySelect.innerHTML = '<option value="">-- Selecciona una actividad --</option>'; // Limpiar opciones existentes
             
-            // Separar "Otra actividad"
-            const otherActivity = commonActivities.find(act => act.name === 'Otra actividad');
-            const filteredActivities = commonActivities.filter(act => act.name !== 'Otra actividad');
-
-            // Ordenar las actividades restantes alfabéticamente por nombre
-            filteredActivities.sort((a, b) => a.name.localeCompare(b.name));
+            // Ordenar las actividades alfabéticamente por nombre
+            const sortedActivities = [...commonActivities].sort((a, b) => a.name.localeCompare(b.name));
 
             // Añadir las actividades ordenadas
-            filteredActivities.forEach(activity => {
+            sortedActivities.forEach(activity => {
                 const option = document.createElement('option');
                 option.value = activity.name;
                 option.textContent = activity.name;
                 activitySelect.appendChild(option);
             });
-
-            // Añadir "Otra actividad" al final si existe
-            if (otherActivity) {
-                const option = document.createElement('option');
-                option.value = otherActivity.name;
-                option.textContent = otherActivity.name;
-                activitySelect.appendChild(option);
-            }
 
             updateUI(); // Actualizar la UI inicial
         };
